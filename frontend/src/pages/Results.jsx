@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Clock, DollarSign, Gauge, Wrench, Package, ShieldAlert, ExternalLink,
   Bookmark, BookmarkCheck, ArrowLeft, Video, FileText, BookOpen, FolderPlus, Check,
-  Lock, Printer, Zap, Crown,
+  Lock, Printer, Zap, Crown, Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
@@ -207,13 +207,33 @@ export default function Results() {
             <h2 className="font-display text-4xl tracking-tight text-orange-500 uppercase mb-6">Build Steps</h2>
             <div className="space-y-4">
               {project.steps?.map((s, i) => (
-                <div key={i} className="border-2 border-zinc-800 bg-zinc-950 p-5 flex gap-5" data-testid={`step-${i}`}>
-                  <span className="font-display text-5xl text-orange-600 leading-none">{String(i + 1).padStart(2, "0")}</span>
-                  <div>
-                    <h3 className="font-mono2 font-bold uppercase text-white mb-2">{s.title}</h3>
-                    <p className="font-mono2 text-sm text-zinc-300">{s.detail}</p>
-                    {s.tip && <p className="font-mono2 text-xs text-orange-400 mt-3 border-l-2 border-orange-600 pl-3">PRO TIP: {s.tip}</p>}
+                <div key={i} className="border-2 border-zinc-800 bg-zinc-950 p-5" data-testid={`step-${i}`}>
+                  <div className="flex gap-5">
+                    <span className="font-display text-5xl text-orange-600 leading-none">{String(i + 1).padStart(2, "0")}</span>
+                    <div className="flex-1">
+                      <h3 className="font-mono2 font-bold uppercase text-white mb-2">{s.title}</h3>
+                      <p className="font-mono2 text-sm text-zinc-300">{s.detail}</p>
+                      {s.tip && <p className="font-mono2 text-xs text-orange-400 mt-3 border-l-2 border-orange-600 pl-3">PRO TIP: {s.tip}</p>}
+                    </div>
                   </div>
+                  {!project.locked && (s.image_url || true) && (
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+                      {s.image_url && (
+                        <div className="sm:col-span-2 border-2 border-zinc-800 overflow-hidden">
+                          <img src={s.image_url} alt={s.title} className="w-full h-44 object-cover" data-testid={`step-image-${i}`} />
+                        </div>
+                      )}
+                      <a
+                        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${project.title} ${s.title} tutorial`)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className={`${s.image_url ? "" : "sm:col-span-3"} flex flex-col items-center justify-center gap-2 border-2 border-zinc-700 bg-zinc-900 hover:border-red-500 hover:bg-red-950/20 transition-none p-4 text-center group`}
+                        data-testid={`step-video-${i}`}
+                      >
+                        <Youtube className="w-8 h-8 text-red-500 group-hover:scale-110 transition-transform" />
+                        <span className="font-mono2 text-xs font-bold uppercase text-zinc-200">Watch on YouTube</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

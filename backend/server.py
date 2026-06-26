@@ -27,6 +27,7 @@ db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
 STRIPE_API_KEY = os.environ['STRIPE_API_KEY']
+PEXELS_API_KEY = os.environ['PEXELS_API_KEY']
 EMERGENT_AUTH_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
 # Server-side fixed pricing (never trust frontend amounts)
@@ -52,6 +53,8 @@ class Step(BaseModel):
     title: str
     detail: str
     tip: str = ""
+    image_keyword: str = ""
+    image_url: str = ""
 
 
 class Resource(BaseModel):
@@ -229,7 +232,7 @@ Return ONLY valid minified JSON (no markdown, no code fences) with EXACTLY this 
  "category": "string e.g. Woodworking, Electronics, Home Repair, Crafts, Automotive, Gardening",
  "tools": ["list of required tools"],
  "materials": [{"name":"string","quantity":"string"}],
- "steps": [{"title":"short step title","detail":"clear instructions","tip":"optional pro tip"}],
+ "steps": [{"title":"short step title","detail":"clear instructions","tip":"optional pro tip","image_keyword":"2-3 word stock-photo search term, concrete nouns only e.g. 'circular saw wood' or 'soldering iron wire'"}],
  "safety_tips": ["list of safety notes"],
  "resources": [{"title":"string","type":"video|article|guide","source":"site/channel name","url":"a real plausible URL"}]
 }
@@ -287,6 +290,31 @@ def aggregated_resources(query: str, llm_resources: list) -> list:
     return out
 
 
+async def fetch_pexels(keyword: str) -> str:
+    kw = (keyword or "").lower().strip()
+    if not kw:
+        return ""
+    cached = await db.photo_cache.find_one({"query": kw}, {"_id": 0})
+    if cached:
+        return cached.get("url", "")
+    try:
+        async with httpx.AsyncClient(timeout=10) as hc:
+            r = await hc.get(
+                "https://api.pexels.com/v1/search",
+                headers={"Authorization": PEXELS_API_KEY},
+                params={"query": kw, "per_page": 1, "orientation": "landscape"},
+            )
+        if r.status_code == 200:
+            photos = r.json().get("photos", [])
+            if photos:
+                url = photos[0]["src"]["landscape"]
+                await db.photo_cache.insert_one({"query": kw, "url": url})
+                return url
+    except Exception as e:
+        logger.warning(f"Pexels fetch failed for '{kw}': {e}")
+    return ""
+
+
 @api_router.post("/projects/search", response_model=Project)
 async def search_project(req: SearchRequest):
     query = req.query.strip()
@@ -309,6 +337,11 @@ async def search_project(req: SearchRequest):
     project = Project(query=query, **{k: data.get(k) for k in [
         "title", "summary", "difficulty", "estimated_time", "estimated_cost",
         "category", "tools", "materials", "steps", "safety_tips", "resources"] if data.get(k) is not None})
+
+    # Fetch & cache one stock photo per step (paid section media)
+    for step in project.steps:
+        kw = step.image_keyword or f"{project.category} {step.title}"
+        step.image_url = await fetch_pexels(kw)
 
     doc = project.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
@@ -346,6 +379,7 @@ async def get_project(project_id: str, request: Request):
         first = data["steps"][:1]
         for s in first:
             s["tip"] = ""
+            s["image_url"] = ""
         data["steps"] = first
         data["safety_tips"] = []
         data["resources"] = []

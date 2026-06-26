@@ -241,6 +241,66 @@ class TestPayments:
                               "return_path": "/x",
                               "project_id": EXISTING_PROJECT_ID,
                               "amount": 0.01})
-        # Verify amounts in mongo via API: the status endpoint doesn't expose amount,
-        # so we rely on the fact that PACKAGES is hard-coded (verified in /packages test).
-        # Direct mongo check covered in a separate script.
+
+
+# ---------------- Pexels images & gating (new feature) ----------------
+class TestPexelsImages:
+    NEW_QUERY = "build a small wooden stool"
+
+    def test_search_steps_include_image_url_and_keyword(self, client):
+        """Backend POST /api/projects/search returns steps with image_keyword & Pexels image_url."""
+        r = client.post(f"{BASE_URL}/api/projects/search",
+                        json={"query": self.NEW_QUERY}, timeout=180)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert len(d["steps"]) >= 1
+        # ensure step model has new fields
+        for s in d["steps"]:
+            assert "image_keyword" in s
+            assert "image_url" in s
+        # at least most steps should have a non-empty Pexels url
+        pexels = [s for s in d["steps"] if s["image_url"].startswith("https://images.pexels.com")]
+        assert len(pexels) >= max(1, len(d["steps"]) // 2), \
+            f"Expected most steps to have Pexels URLs, got {len(pexels)}/{len(d['steps'])}"
+        pytest.stool_project_id = d["id"]
+
+    def test_search_cached_reuses_photos(self, client):
+        """Searching same query twice reuses cached project & photo_cache (no errors)."""
+        r1 = client.post(f"{BASE_URL}/api/projects/search",
+                         json={"query": self.NEW_QUERY}, timeout=60)
+        assert r1.status_code == 200
+        d1 = r1.json()
+        r2 = client.post(f"{BASE_URL}/api/projects/search",
+                         json={"query": self.NEW_QUERY}, timeout=60)
+        assert r2.status_code == 200
+        d2 = r2.json()
+        assert d1["id"] == d2["id"], "Same query must return cached project"
+        # image_urls match between calls
+        for s1, s2 in zip(d1["steps"], d2["steps"]):
+            assert s1["image_url"] == s2["image_url"]
+
+    def test_free_preview_strips_image_url(self, client):
+        """GET /api/projects/{id} without auth: locked=true, 1 step, image_url=''."""
+        pid = getattr(pytest, "stool_project_id", None) or "proj_f73cad3471f8"
+        r = client.get(f"{BASE_URL}/api/projects/{pid}")
+        assert r.status_code == 200
+        d = r.json()
+        assert d["locked"] is True
+        assert len(d["steps"]) == 1
+        assert d["steps"][0]["image_url"] == "", \
+            "Free preview step must have empty image_url"
+
+    def test_pro_sees_step_images(self, pro_client):
+        """Pro user sees all steps with non-empty Pexels image_url."""
+        pid = getattr(pytest, "stool_project_id", None) or "proj_f73cad3471f8"
+        r = pro_client.get(f"{BASE_URL}/api/projects/{pid}")
+        assert r.status_code == 200
+        d = r.json()
+        assert d["locked"] is False
+        assert d["has_access"] is True
+        assert len(d["steps"]) == d["total_steps"]
+        non_empty = [s for s in d["steps"] if s["image_url"]]
+        assert len(non_empty) >= 1, "Pro user must see step images"
+        # at least one Pexels URL
+        assert any(s["image_url"].startswith("https://images.pexels.com")
+                   for s in d["steps"]), "Expected Pexels URLs in paid section"

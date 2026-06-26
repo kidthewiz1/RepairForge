@@ -1,0 +1,35 @@
+{
+  "summary": "Verified new per-step Pexels image + 'Watch on YouTube' button feature, gated to paid section. All 23 backend pytest cases pass (19 regressions + 4 new). Frontend: unauthenticated free preview shows paywall with 0 step-images & 0 step-videos. Pro session (cookie) sees 9 step-images (Pexels) + 9 YouTube buttons + 8 resources. Caching: same query reuses cached project & photo_cache entries (9 cached photos). Stripe paywall buttons ($2.99 unlock-guide-btn, $9/mo go-pro-btn), favorites, collections, print all still functional.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Project detail (Materials sidebar)", "issues": ["The Materials list quantity column overlaps/runs into the right edge for long quantity strings (e.g. 'One 6-foot length of 1x6 board...'). The flex justify-between with whitespace-nowrap on quantity causes text to overflow horizontally outside the card on narrow material names. Consider wrapping quantity or using a stacked layout."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fixforge_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional UI polish) Fix Materials sidebar overflow when quantity text is long - the whitespace-nowrap text bleeds past the card border on the right side."
+  ],
+  "critical_code_review_comments": [
+    "Results.jsx line 219: `{!project.locked && (s.image_url || true) && (...)}` - the `|| true` short-circuits to always true, making the `s.image_url ||` check dead code. Intent appears to be 'always render YouTube btn, image is optional' which already works because of the inner `{s.image_url && ...}` block. The outer condition simplifies to just `!project.locked` - the `(s.image_url || true)` is misleading and should be removed.",
+    "fetch_pexels() catches all Exceptions but does not cache a negative result. If Pexels API is rate-limited or returns no photos for a keyword, every subsequent search call re-hits Pexels for the same query. Consider caching empty strings with a TTL or a 'no_result' marker to avoid repeated upstream calls.",
+    "server.py still grows (~595 lines) - split into routers/ before adding more features (auth, projects, payments, favorites/collections).",
+    "PEXELS_API_KEY hard-failure via `os.environ['PEXELS_API_KEY']` at import time is correct (fail-fast), but consider documenting required env vars in a README to help next dev onboarding.",
+    "Step.image_keyword is exposed in the API response even in locked free preview - low risk but unnecessary metadata leak. Consider stripping it alongside tip & image_url in the locked branch."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fixforge_api.py"
+  ],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "100% (all critical flows + new image/video gating)"},
+  "test_credentials": "Reused seeded tokens from iteration_1 - free: test_session_1782475351046 (user test-user-1782475351046), pro: test_session_pro_1782475351057 (user test-pro-1782475351057, is_pro=true). Verified still valid in db.user_sessions.",
+  "seed_data_creation": "No new seed data. Test query 'build a small wooden stool' triggers a fresh LLM+Pexels generation; cached project id is captured in pytest.stool_project_id and reused across tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Tests in /app/backend/tests/test_fixforge_api.py now include TestPexelsImages class covering: (1) steps have Pexels image_url + image_keyword on search, (2) repeat search reuses cached project/photo_cache, (3) free preview strips image_url to '', (4) Pro user sees full steps with Pexels URLs. Pre-existing project proj_f73cad3471f8 (Scrap Wood Birdhouse, 9 steps) has Pexels images cached for fast browser tests. db.photo_cache has 9+ entries. Frontend data-testids: step-image-{i}, step-video-{i}, paywall, unlock-guide-btn, go-pro-btn, print-btn, favorite-btn.",
+  "rca of the issue": "No bug found. Feature implementation is correct end-to-end: fetch_pexels() caches by lowercased keyword in db.photo_cache (verified 9 entries); search_project loop populates step.image_url per step; get_project strips image_url to '' for the first step in the locked-preview branch (line ~382); Results.jsx only renders the image+video block when !project.locked. The paywall flow remains intact ($2.99 / $9 mo). One harmless code smell noted in Results.jsx (dead `|| true` in conditional) reported under critical_code_review_comments."
+}
