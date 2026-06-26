@@ -15,7 +15,7 @@ export default function Navbar() {
           <div className="bg-orange-600 text-black p-1.5 border-2 border-orange-600 group-hover:bg-orange-500 transition-none">
             <Wrench className="w-5 h-5" strokeWidth={2.5} />
           </div>
-          <span className="font-display text-2xl tracking-wide text-white">FIX<span className="text-orange-500">FORGE</span></span>
+          <span className="font-display text-2xl tracking-wide text-white">REPAIR<span className="text-orange-500">FORGE</span><span className="text-orange-500 text-base align-top">.ca</span></span>
         </Link>
 
         <nav className="flex items-center gap-3">

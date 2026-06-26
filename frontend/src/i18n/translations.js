@@ -20,7 +20,7 @@ export const translations = {
     feature3Title: "Save & Organize",
     feature3Desc: "Bookmark builds and group them into your personal workshop collections.",
     popularBuilds: "Popular Builds",
-    footer: "FixForge // Build Anything",
+    footer: "RepairForge.ca // Build Anything",
     suggestions: [
       "Build a wooden workbench",
       "Replace a car brake pad",
@@ -54,7 +54,7 @@ export const translations = {
     goPro: "Go Pro",
     proDesc: "Unlock every guide + all resources",
     signInToPurchase: "Sign in required to purchase.",
-    shoppingListSubtitle: "Shopping & Tools List — FixForge",
+    shoppingListSubtitle: "Shopping & Tools List — RepairForge.ca",
     loadingBlueprint: "// Loading blueprint...",
     // Dashboard
     yourWorkshop: "Your Workshop",
@@ -113,7 +113,7 @@ export const translations = {
     feature3Title: "Sauvegarder & Organiser",
     feature3Desc: "Enregistrez vos projets et regroupez-les dans vos collections d'atelier.",
     popularBuilds: "Projets Populaires",
-    footer: "FixForge // Construisez Tout",
+    footer: "RepairForge.ca // Construisez Tout",
     suggestions: [
       "Construire un établi en bois",
       "Remplacer une plaquette de frein",
@@ -147,7 +147,7 @@ export const translations = {
     goPro: "Passer Pro",
     proDesc: "Débloquez tous les guides + ressources",
     signInToPurchase: "Connexion requise pour acheter.",
-    shoppingListSubtitle: "Liste d'Achats & Outils — FixForge",
+    shoppingListSubtitle: "Liste d'Achats & Outils — RepairForge.ca",
     loadingBlueprint: "// Chargement du plan...",
     // Dashboard
     yourWorkshop: "Votre Atelier",
