@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" fill="#0a0a0a"/>
+  <!-- Hammer head -->
+  <rect x="2" y="5" width="22" height="10" rx="2.5" fill="#ea580c"/>
+  <!-- Darker back of hammer head -->
+  <rect x="18" y="5" width="6" height="10" rx="2" fill="#c2410c"/>
+  <!-- Handle -->
+  <rect x="10" y="14" width="5" height="14" rx="2" fill="#ea580c"/>
+  <!-- Spark dot -->
+  <circle cx="24" cy="19" r="2" fill="#fbbf24" opacity="0.9"/>
+</svg>
