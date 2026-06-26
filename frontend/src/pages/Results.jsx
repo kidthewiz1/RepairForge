@@ -10,6 +10,7 @@ import Navbar from "@/components/Navbar";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -22,6 +23,7 @@ export default function Results() {
   const [searchParams] = useSearchParams();
   const { user, login, checkAuth } = useAuth();
   const { t } = useLang();
+  const { format: formatPrice } = useCurrency();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [favorited, setFavorited] = useState(false);
@@ -256,13 +258,13 @@ export default function Results() {
                     <button onClick={() => checkout("guide")} disabled={paying} className="border-2 border-zinc-700 bg-zinc-900 p-5 text-left hover:border-orange-500 transition-none disabled:opacity-60" data-testid="unlock-guide-btn">
                       <Zap className="w-6 h-6 text-orange-500 mb-2" />
                       <p className="font-mono2 font-bold uppercase text-white">{t("unlockThisGuide")}</p>
-                      <p className="font-display text-4xl text-orange-500 leading-none mt-1">$2.99</p>
+                      <p className="font-display text-4xl text-orange-500 leading-none mt-1">{formatPrice(2.99)}</p>
                       <p className="font-mono2 text-xs text-zinc-500 mt-1">{t("oneTimeBuild")}</p>
                     </button>
                     <button onClick={() => checkout("pro")} disabled={paying} className="border-2 border-orange-600 bg-orange-600/10 p-5 text-left hover:bg-orange-600/20 transition-none disabled:opacity-60" data-testid="go-pro-btn">
                       <Crown className="w-6 h-6 text-orange-500 mb-2" />
                       <p className="font-mono2 font-bold uppercase text-white">{t("goPro")}</p>
-                      <p className="font-display text-4xl text-orange-500 leading-none mt-1">$9<span className="text-lg">/mo</span></p>
+                      <p className="font-display text-4xl text-orange-500 leading-none mt-1">{formatPrice(9)}<span className="text-lg">/mo</span></p>
                       <p className="font-mono2 text-xs text-zinc-500 mt-1">{t("proDesc")}</p>
                     </button>
                   </div>
