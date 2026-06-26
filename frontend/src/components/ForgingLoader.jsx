@@ -95,6 +95,13 @@ export default function ForgingLoader({ query }) {
             transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
           />
         </div>
+
+        {/* Permanent wait-time notice */}
+        <div className="mt-8 max-w-sm border border-orange-900 bg-orange-950/40 px-4 py-3">
+          <p className="font-mono2 text-orange-400 text-xs leading-relaxed text-center">
+            {t("loaderNote")}
+          </p>
+        </div>
       </div>
     </motion.div>
   );
