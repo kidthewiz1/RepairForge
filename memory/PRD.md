@@ -33,6 +33,15 @@
 - Media shown ONLY in unlocked/paid section; free preview step strips image_url. PEXELS_API_KEY in .env.
 - Verified by testing agent (23/23 backend, browser pro vs free gating). Fixed Materials overflow + dead conditional.
 
+## Internationalization (added 2026-06-26)
+- Bilingual EN + FR. Auto-detects from `navigator.language` (fr* → French), persists in localStorage `ff_lang`. EN/FR toggle in navbar.
+- Frontend i18n: `src/i18n/translations.js` (full EN+FR dictionaries) + `LanguageContext` with `t()`/`setLang()`. All pages (Landing, Results, Dashboard, Navbar, ForgingLoader) localized.
+- AI guides generated in selected language: `/api/projects/search` accepts `lang`; cached per (query, lang); step `image_keyword` kept English for photo accuracy; resource link titles localized.
+- Verified by testing agent (27/27 backend + full browser i18n flows).
+
+## Forging Loader (added 2026-06-26)
+- Full-screen animated overlay (striking hammer + sparks, rotating gears, wrench bar, cycling status, progress shimmer) while a guide generates. Localized messages.
+
 ## Backlog
 - P1: True recurring Stripe subscription (current Pro is a one-time $9 unlock granting is_pro; recurring needs a Stripe Price ID set in Dashboard)
 - P1: Streaming generation UX, search-history page, share guide link, Pro badge in navbar
