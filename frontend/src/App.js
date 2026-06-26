@@ -7,9 +7,13 @@ import Landing from "@/pages/Landing";
 import Results from "@/pages/Results";
 import Dashboard from "@/pages/Dashboard";
 import AuthCallback from "@/pages/AuthCallback";
+import Maintenance from "@/pages/Maintenance";
+
+const MAINTENANCE = process.env.REACT_APP_MAINTENANCE === "true";
 
 function AppRouter() {
   const location = useLocation();
+  if (MAINTENANCE) return <Maintenance />;
   if (location.hash?.includes("session_id=")) {
     return <AuthCallback />;
   }
