@@ -6,9 +6,11 @@ import Navbar from "@/components/Navbar";
 import ProjectCard from "@/components/ProjectCard";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLang } from "@/context/LanguageContext";
 
 export default function Dashboard() {
   const { user, loading, login } = useAuth();
+  const { t } = useLang();
   const navigate = useNavigate();
   const [tab, setTab] = useState("favorites");
   const [favorites, setFavorites] = useState([]);
@@ -33,9 +35,9 @@ export default function Dashboard() {
       <div className="min-h-screen bg-black">
         <Navbar />
         <div className="max-w-md mx-auto text-center py-32 px-4">
-          <h1 className="font-display text-5xl text-white uppercase mb-4">Your Workshop</h1>
-          <p className="font-mono2 text-zinc-400 mb-8">Sign in to save builds and organize your DIY collections.</p>
-          <button onClick={login} className="btn-brutal px-8 py-3" data-testid="dashboard-login-btn">Sign In With Google</button>
+          <h1 className="font-display text-5xl text-white uppercase mb-4">{t("yourWorkshop")}</h1>
+          <p className="font-mono2 text-zinc-400 mb-8">{t("dashboardPrompt")}</p>
+          <button onClick={login} className="btn-brutal px-8 py-3" data-testid="dashboard-login-btn">{t("signInWithGoogle")}</button>
         </div>
       </div>
     );
@@ -43,24 +45,24 @@ export default function Dashboard() {
 
   const createCol = async () => {
     if (!newCol.trim()) return;
-    try { await api.post("/collections", { name: newCol.trim() }); setNewCol(""); load(); toast.success("Collection created"); }
-    catch { toast.error("Failed"); }
+    try { await api.post("/collections", { name: newCol.trim() }); setNewCol(""); load(); toast.success(t("toastCollectionCreated")); }
+    catch { toast.error(t("toastFailed")); }
   };
 
   const delCol = async (cid) => {
-    try { await api.delete(`/collections/${cid}`); load(); toast.success("Deleted"); }
-    catch { toast.error("Failed"); }
+    try { await api.delete(`/collections/${cid}`); load(); toast.success(t("toastDeleted")); }
+    catch { toast.error(t("toastFailed")); }
   };
 
   return (
     <div className="min-h-screen bg-black">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <h1 className="font-display text-6xl tracking-tight text-white uppercase leading-none mb-2">Workshop</h1>
+        <h1 className="font-display text-6xl tracking-tight text-white uppercase leading-none mb-2">{t("workshop")}</h1>
         <p className="font-mono2 text-zinc-500 mb-8">// {user.name}</p>
 
         <div className="flex gap-0 mb-8 border-b-2 border-zinc-800">
-          {[["favorites", "Favorites", Bookmark], ["collections", "Collections", FolderOpen]].map(([k, label, Icon]) => (
+          {[["favorites", t("favorites"), Bookmark], ["collections", t("collections"), FolderOpen]].map(([k, label, Icon]) => (
             <button key={k} onClick={() => setTab(k)} className={`flex items-center gap-2 px-6 py-3 font-mono2 text-sm font-bold uppercase transition-none border-b-2 -mb-0.5 ${tab === k ? "text-orange-500 border-orange-500" : "text-zinc-500 border-transparent hover:text-white"}`} data-testid={`tab-${k}`}>
               <Icon className="w-4 h-4" /> {label}
             </button>
@@ -70,8 +72,8 @@ export default function Dashboard() {
         {tab === "favorites" && (
           favorites.length === 0 ? (
             <div className="text-center py-20 border-2 border-dashed border-zinc-800">
-              <p className="font-mono2 text-zinc-500 mb-4">No saved builds yet.</p>
-              <button onClick={() => navigate("/")} className="btn-brutal px-6 py-2 text-xs inline-flex items-center gap-2"><Search className="w-4 h-4" /> Find a Project</button>
+              <p className="font-mono2 text-zinc-500 mb-4">{t("noSavedBuilds")}</p>
+              <button onClick={() => navigate("/")} className="btn-brutal px-6 py-2 text-xs inline-flex items-center gap-2"><Search className="w-4 h-4" /> {t("findProject")}</button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -83,13 +85,13 @@ export default function Dashboard() {
         {tab === "collections" && (
           <div>
             <div className="flex gap-0 mb-8 max-w-md">
-              <input value={newCol} onChange={(e) => setNewCol(e.target.value)} onKeyDown={(e) => e.key === "Enter" && createCol()} placeholder="New collection name" className="flex-1 bg-zinc-900 border-2 border-zinc-700 px-4 py-2 font-mono2 text-sm outline-none focus:border-orange-500" data-testid="dash-new-collection-input" />
-              <button onClick={createCol} className="btn-brutal px-4 flex items-center gap-1 text-xs" data-testid="dash-create-collection-btn"><Plus className="w-4 h-4" /> Create</button>
+              <input value={newCol} onChange={(e) => setNewCol(e.target.value)} onKeyDown={(e) => e.key === "Enter" && createCol()} placeholder={t("newCollectionName")} className="flex-1 bg-zinc-900 border-2 border-zinc-700 px-4 py-2 font-mono2 text-sm outline-none focus:border-orange-500" data-testid="dash-new-collection-input" />
+              <button onClick={createCol} className="btn-brutal px-4 flex items-center gap-1 text-xs" data-testid="dash-create-collection-btn"><Plus className="w-4 h-4" /> {t("create")}</button>
             </div>
 
             {collections.length === 0 ? (
               <div className="text-center py-20 border-2 border-dashed border-zinc-800">
-                <p className="font-mono2 text-zinc-500">No collections yet. Create one above.</p>
+                <p className="font-mono2 text-zinc-500">{t("noCollectionsYet")}</p>
               </div>
             ) : (
               <div className="space-y-10">
@@ -107,7 +109,7 @@ export default function Dashboard() {
                         {c.projects.map((p, i) => <ProjectCard key={p.id} project={p} index={i} />)}
                       </div>
                     ) : (
-                      <p className="font-mono2 text-sm text-zinc-600 border-2 border-dashed border-zinc-800 p-6">Empty — add builds from any project page.</p>
+                      <p className="font-mono2 text-sm text-zinc-600 border-2 border-dashed border-zinc-800 p-6">{t("emptyCollection")}</p>
                     )}
                   </div>
                 ))}

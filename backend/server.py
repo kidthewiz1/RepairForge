@@ -84,6 +84,7 @@ class Project(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
+    lang: str = "en"
 
 
 class User(BaseModel):
@@ -253,11 +254,14 @@ def extract_json(text: str) -> dict:
     return json.loads(text)
 
 
-async def generate_guide(query: str) -> dict:
+async def generate_guide(query: str, lang: str = "en") -> dict:
+    system = GUIDE_SYSTEM
+    if lang == "fr":
+        system += "\n\nIMPORTANT: Write ALL text fields (title, summary, step titles/details/tips, materials names, safety_tips, resource titles) in FRENCH. EXCEPTION: keep each step's 'image_keyword' in ENGLISH (concrete nouns) for stock-photo search accuracy."
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
         session_id=f"diy_{uuid.uuid4().hex[:8]}",
-        system_message=GUIDE_SYSTEM,
+        system_message=system,
     ).with_model("anthropic", "claude-sonnet-4-6")
     msg = UserMessage(text=f"Create a complete DIY guide for: {query}")
     resp = await chat.send_message(msg)
@@ -265,24 +269,25 @@ async def generate_guide(query: str) -> dict:
     return data
 
 
-def aggregated_resources(query: str, llm_resources: list) -> list:
+def aggregated_resources(query: str, llm_resources: list, lang: str = "en") -> list:
     """Combine LLM-suggested resources with guaranteed-valid search links."""
     q = urllib.parse.quote_plus(query + " DIY tutorial")
+    fr = lang == "fr"
     out = list(llm_resources or [])
     out.append({
-        "title": f"YouTube tutorials for '{query}'",
+        "title": (f"Tutoriels YouTube pour « {query} »" if fr else f"YouTube tutorials for '{query}'"),
         "type": "video",
         "source": "YouTube",
         "url": f"https://www.youtube.com/results?search_query={q}",
     })
     out.append({
-        "title": f"Instructables projects",
+        "title": ("Projets sur Instructables" if fr else "Instructables projects"),
         "type": "guide",
         "source": "Instructables",
         "url": f"https://www.instructables.com/search/?q={urllib.parse.quote_plus(query)}",
     })
     out.append({
-        "title": f"More guides on the web",
+        "title": ("Plus de guides sur le web" if fr else "More guides on the web"),
         "type": "article",
         "source": "Google",
         "url": f"https://www.google.com/search?q={q}",
@@ -320,20 +325,21 @@ async def search_project(req: SearchRequest):
     query = req.query.strip()
     if not query:
         raise HTTPException(status_code=400, detail="Query required")
+    lang = "fr" if req.lang == "fr" else "en"
 
-    cached = await db.projects.find_one({"query_lower": query.lower()}, {"_id": 0})
+    cached = await db.projects.find_one({"query_lower": query.lower(), "lang": lang}, {"_id": 0})
     if cached:
         await db.projects.update_one({"id": cached["id"]}, {"$inc": {"search_count": 1}})
         cached.pop("query_lower", None)
         return Project(**cached)
 
     try:
-        data = await generate_guide(query)
+        data = await generate_guide(query, lang)
     except Exception as e:
         logger.error(f"LLM generation failed: {e}")
         raise HTTPException(status_code=502, detail="Could not generate guide. Try again.")
 
-    data["resources"] = aggregated_resources(query, data.get("resources", []))
+    data["resources"] = aggregated_resources(query, data.get("resources", []), lang)
     project = Project(query=query, **{k: data.get(k) for k in [
         "title", "summary", "difficulty", "estimated_time", "estimated_cost",
         "category", "tools", "materials", "steps", "safety_tips", "resources"] if data.get(k) is not None})
@@ -346,6 +352,7 @@ async def search_project(req: SearchRequest):
     doc = project.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
     doc["query_lower"] = query.lower()
+    doc["lang"] = lang
     await db.projects.insert_one(doc)
     return project
 

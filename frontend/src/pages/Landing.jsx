@@ -6,15 +6,7 @@ import Navbar from "@/components/Navbar";
 import ProjectCard from "@/components/ProjectCard";
 import ForgingLoader from "@/components/ForgingLoader";
 import { api } from "@/lib/api";
-
-const SUGGESTIONS = [
-  "Build a wooden workbench",
-  "Replace a car brake pad",
-  "Build a raised garden bed",
-  "Wire a smart light switch",
-  "Make a floating bookshelf",
-  "Fix a leaking faucet",
-];
+import { useLang } from "@/context/LanguageContext";
 
 const HERO_IMG = "https://images.unsplash.com/photo-1614585849038-272ee92d30fa";
 
@@ -24,6 +16,8 @@ export default function Landing() {
   const [forgingTerm, setForgingTerm] = useState("");
   const [trending, setTrending] = useState([]);
   const navigate = useNavigate();
+  const { lang, t } = useLang();
+  const suggestions = t("suggestions");
 
   useEffect(() => {
     api.get("/projects/trending").then((r) => setTrending(r.data)).catch(() => {});
@@ -35,10 +29,10 @@ export default function Landing() {
     setForgingTerm(term);
     setLoading(true);
     try {
-      const res = await api.post("/projects/search", { query: term });
+      const res = await api.post("/projects/search", { query: term, lang });
       navigate(`/project/${res.data.id}`);
     } catch (e) {
-      toast.error("Could not forge that guide. Try rephrasing.");
+      toast.error(t("toastForgeError"));
       setLoading(false);
     }
   };
@@ -58,15 +52,14 @@ export default function Landing() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
           <div className="max-w-3xl">
             <span className="inline-block bg-orange-600 text-black font-mono2 text-xs font-bold uppercase tracking-[0.2em] px-3 py-1 mb-6">
-              // AI DIY Aggregator
+              {t("badge")}
             </span>
             <h1 className="font-display text-5xl sm:text-7xl tracking-tight text-white leading-[0.9] uppercase mb-4">
-              Any Project.<br />
-              <span className="text-orange-500">One Master Guide.</span>
+              {t("heroTitle1")}<br />
+              <span className="text-orange-500">{t("heroTitle2")}</span>
             </h1>
             <p className="font-mono2 text-base sm:text-lg text-zinc-300 mb-8 max-w-xl">
-              Search any DIY build or repair. We aggregate the best of the web into one
-              definitive step-by-step blueprint — tools, materials, steps & video links.
+              {t("heroSubtitle")}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-0 sm:gap-0 max-w-2xl">
@@ -76,7 +69,7 @@ export default function Landing() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                  placeholder="e.g. build a chicken coop"
+                  placeholder={t("searchPlaceholder")}
                   className="flex-1 bg-transparent text-white font-mono2 px-3 py-4 outline-none placeholder:text-zinc-600"
                   data-testid="search-input"
                 />
@@ -87,17 +80,17 @@ export default function Landing() {
                 className="btn-brutal px-6 py-4 flex items-center justify-center gap-2 disabled:opacity-60"
                 data-testid="search-submit-btn"
               >
-                {loading ? "Forging..." : <>Forge Guide <ArrowRight className="w-4 h-4" /></>}
+                {loading ? t("forging") : <>{t("forgeGuide")} <ArrowRight className="w-4 h-4" /></>}
               </button>
             </div>
 
             <div className="flex flex-wrap gap-2 mt-5">
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s, idx) => (
                 <button
                   key={s}
                   onClick={() => { setQuery(s); runSearch(s); }}
                   className="border border-zinc-700 text-zinc-400 hover:text-orange-500 hover:border-orange-500 font-mono2 text-xs px-3 py-1.5 transition-none"
-                  data-testid={`suggestion-${s.slice(0,6)}`}
+                  data-testid={`suggestion-${idx}`}
                 >
                   {s}
                 </button>
@@ -111,9 +104,9 @@ export default function Landing() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Zap, t: "AI-Forged Guides", d: "Claude reads the maker web and synthesizes one accurate build plan instantly." },
-            { icon: BookOpen, t: "Tools & Materials", d: "Exact shopping list with quantities so you buy right the first time." },
-            { icon: Bookmark, t: "Save & Organize", d: "Bookmark builds and group them into your personal workshop collections." },
+            { icon: Zap, t: t("feature1Title"), d: t("feature1Desc") },
+            { icon: BookOpen, t: t("feature2Title"), d: t("feature2Desc") },
+            { icon: Bookmark, t: t("feature3Title"), d: t("feature3Desc") },
           ].map((f, i) => (
             <div key={i} className="border-2 border-zinc-800 bg-zinc-950 p-6">
               <f.icon className="w-8 h-8 text-orange-500 mb-4" strokeWidth={2} />
@@ -129,7 +122,7 @@ export default function Landing() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
           <div className="flex items-center gap-3 mb-8">
             <Wrench className="w-6 h-6 text-orange-500" />
-            <h2 className="font-display text-4xl tracking-tight text-orange-500 uppercase">Popular Builds</h2>
+            <h2 className="font-display text-4xl tracking-tight text-orange-500 uppercase">{t("popularBuilds")}</h2>
             <div className="flex-1 h-0.5 bg-zinc-800" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -139,7 +132,7 @@ export default function Landing() {
       )}
 
       <footer className="border-t-2 border-zinc-800 py-8 text-center">
-        <p className="font-mono2 text-xs text-zinc-600 uppercase tracking-widest">FixForge // Build Anything</p>
+        <p className="font-mono2 text-xs text-zinc-600 uppercase tracking-widest">{t("footer")}</p>
       </footer>
     </div>
   );

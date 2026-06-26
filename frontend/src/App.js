@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 import Landing from "@/pages/Landing";
 import Results from "@/pages/Results";
 import Dashboard from "@/pages/Dashboard";
@@ -25,10 +26,12 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <AuthProvider>
-          <AppRouter />
-          <Toaster theme="dark" position="bottom-right" toastOptions={{ style: { borderRadius: 0, border: "2px solid #ea580c", background: "#0a0a0a", color: "#fff", fontFamily: "Space Mono, monospace" } }} />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <AppRouter />
+            <Toaster theme="dark" position="bottom-right" toastOptions={{ style: { borderRadius: 0, border: "2px solid #ea580c", background: "#0a0a0a", color: "#fff", fontFamily: "Space Mono, monospace" } }} />
+          </AuthProvider>
+        </LanguageProvider>
       </BrowserRouter>
     </div>
   );

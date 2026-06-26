@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Wrench, LogOut, LayoutGrid } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useLang } from "@/context/LanguageContext";
 
 export default function Navbar() {
   const { user, login, logout } = useAuth();
+  const { lang, setLang, t } = useLang();
   const navigate = useNavigate();
 
   return (
@@ -17,6 +19,18 @@ export default function Navbar() {
         </Link>
 
         <nav className="flex items-center gap-3">
+          <div className="flex items-center border-2 border-zinc-700" data-testid="lang-toggle">
+            <button
+              onClick={() => setLang("en")}
+              className={`px-2.5 py-1 font-mono2 text-xs font-bold transition-none ${lang === "en" ? "bg-orange-600 text-black" : "text-zinc-400 hover:text-white"}`}
+              data-testid="lang-en"
+            >EN</button>
+            <button
+              onClick={() => setLang("fr")}
+              className={`px-2.5 py-1 font-mono2 text-xs font-bold transition-none ${lang === "fr" ? "bg-orange-600 text-black" : "text-zinc-400 hover:text-white"}`}
+              data-testid="lang-fr"
+            >FR</button>
+          </div>
           {user ? (
             <>
               <button
@@ -24,7 +38,7 @@ export default function Navbar() {
                 className="hidden sm:flex items-center gap-2 px-4 py-2 border-2 border-zinc-700 text-white font-mono2 text-xs uppercase font-bold hover:border-orange-500 transition-none"
                 data-testid="nav-dashboard-btn"
               >
-                <LayoutGrid className="w-4 h-4" /> Workshop
+                <LayoutGrid className="w-4 h-4" /> {t("workshop")}
               </button>
               <div className="flex items-center gap-2">
                 {user.picture ? (
@@ -41,7 +55,7 @@ export default function Navbar() {
             </>
           ) : (
             <button onClick={login} className="btn-brutal px-5 py-2 text-xs" data-testid="login-btn">
-              Sign In
+              {t("signIn")}
             </button>
           )}
         </nav>

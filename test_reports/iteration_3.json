@@ -1,0 +1,33 @@
+{
+  "summary": "Verified new i18n feature (English + French) end-to-end. Backend: 4 new TestI18n tests added — FR search returns French title/summary/steps/safety_tips with English image_keyword + Pexels image_url + French aggregated resource titles ('Tutoriels YouTube pour…', 'Projets sur Instructables', 'Plus de guides sur le web'); EN search of same query is cached as a separate project with different id; repeating FR query returns cached project with search_count incremented; both projects retrievable. All 27/27 backend tests pass (23 regressions + 4 new). Frontend: lang-toggle (EN/FR) visible in navbar with proper data-testids; clicking FR switches static UI (Sign In→Connexion, Forge Guide→Forger le Guide, hero 'Tout Projet.'/'Un Guide Complet.', feature cards, footer); choice persists in localStorage 'ff_lang' across reload; browser auto-detection works (navigator.language='fr-FR' + no ff_lang → French); search POST body contains {\"lang\":\"fr\"}; project detail page shows fully French labels (Retour, Étapes de Construction, Outils, Matériaux, Enregistrer, Imprimer la Liste, Débloquer ce Guide, Passer Pro, paywall description in French); toggling back to EN swaps static labels in real-time. Stripe paywall buttons ($2.99 / $9 mo), favorites, collections, and gating all unchanged and functional.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Project detail (Materials sidebar)", "issues": ["Pre-existing from iteration_2: Materials list long quantity strings (e.g. 'One 6-foot length of 1x6 board') can overflow the card. Not regressed by this feature."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fixforge_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "LanguageContext.js detectLang() runs once at useState init (via lazy initializer) but does NOT subscribe to storage events — if user opens two tabs and changes lang in one, the other tab will not sync until reload. Low priority but worth a note.",
+    "translations.js: 'forging' EN='Forging...' vs FR='Forge...' — French is a bit terse; consider 'Forge en cours...' for clarity (cosmetic).",
+    "server.py generate_guide() appends French instruction by string concatenation; if more languages are added, a per-language system-message dict would be cleaner.",
+    "aggregated_resources(): English fallback is implicit (lang != 'fr'). If a new lang (e.g. 'es') ever lands without explicit handling, users will silently get English titles — fine for now but worth flagging.",
+    "server.py still >600 lines; recommend splitting into routers/{auth,projects,payments,collections}.py before next feature (carried over from iteration_2)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fixforge_api.py"
+  ],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "100% (i18n toggle, persistence, auto-detect, FR search payload, FR project-page, EN↔FR runtime swap all verified)"},
+  "test_credentials": "Reused seeded tokens: TOKEN_FREE=test_session_1782475351046, TOKEN_PRO=test_session_pro_1782475351057. Still valid in db.user_sessions.",
+  "seed_data_creation": "New French project 'Fabriquer un porte-épices en bois' created via search (query='build a wooden spice rack', lang='fr'). Companion English project also created for same query. Both retain Pexels images for steps. IDs captured in pytest.fr_project_id / pytest.en_project_id at runtime.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "TestI18n class in /app/backend/tests/test_fixforge_api.py uses query 'build a wooden spice rack' which is now cached in BOTH lang='en' and lang='fr' for fast reruns. Validates: (1) French content + ASCII image_keyword + Pexels image_url, (2) localized resource titles, (3) separate cache per lang, (4) search_count increment on cache hit, (5) both projects retrievable. Frontend testids: lang-toggle, lang-en, lang-fr, search-input, search-submit-btn, forging-loader. localStorage key is 'ff_lang' (values 'en' | 'fr'). To force French in tests: page.evaluate(\"localStorage.setItem('ff_lang','fr')\") then reload. Step image_keyword stays English by design — do NOT flag that as a bug.",
+  "rca of the issue": "No bugs found. Implementation is correct: SearchRequest.lang defaults to 'en' and is normalized server-side (lang = 'fr' if req.lang == 'fr' else 'en'); cache key is {query_lower, lang}; generate_guide appends a French instruction to the system prompt that explicitly tells the LLM to keep image_keyword English; aggregated_resources(lang='fr') swaps titles to French while keeping URLs the same. Frontend LanguageContext.detectLang() reads localStorage 'ff_lang' first, falling back to navigator.language.startsWith('fr'). Landing.jsx sends {query, lang} to /api/projects/search (verified via Playwright network intercept: body == '{\"query\":\"build a wooden spice rack\",\"lang\":\"fr\"}'). Static labels driven via t() from translations.js with full EN+FR dictionaries."
+}

@@ -243,6 +243,71 @@ class TestPayments:
                               "amount": 0.01})
 
 
+# ---------------- i18n / lang feature ----------------
+class TestI18n:
+    QUERY = "build a wooden spice rack"
+
+    def test_search_french_returns_french_content(self, client):
+        r = client.post(f"{BASE_URL}/api/projects/search",
+                        json={"query": self.QUERY, "lang": "fr"}, timeout=180)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        pytest.fr_project_id = d["id"]
+        # Title/summary should contain at least one non-English clue (accented or french common words)
+        text_blob = (d["title"] + " " + d["summary"] + " " + " ".join(s["title"] for s in d["steps"])
+                     + " " + " ".join(d.get("safety_tips", []))).lower()
+        # Common French markers
+        french_markers = ["étag", "bois", "épice", "pour", "les", "de la", "et ", "à ", "une ", "des ", "vous", "construir", "monta"]
+        assert any(m in text_blob for m in french_markers), f"Expected French content, got: {text_blob[:300]}"
+        # image_keywords stay in English (no accents)
+        for s in d["steps"]:
+            kw = s.get("image_keyword", "")
+            assert all(ord(c) < 128 for c in kw), f"image_keyword should be ASCII English, got: {kw}"
+            assert s.get("image_url", "").startswith("https://images.pexels.com") or s.get("image_url", "") == ""
+        # Aggregated resource titles include French markers
+        res_titles = " ".join(r["title"] for r in d["resources"])
+        assert "Tutoriels YouTube" in res_titles, f"Expected French YouTube title, got: {res_titles}"
+        assert "Instructables" in res_titles
+        assert "Plus de guides" in res_titles or "guides sur le web" in res_titles
+
+    def test_search_english_separate_cache(self, client):
+        r = client.post(f"{BASE_URL}/api/projects/search",
+                        json={"query": self.QUERY, "lang": "en"}, timeout=180)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        pytest.en_project_id = d["id"]
+        # Must be a different project than the French one
+        assert d["id"] != getattr(pytest, "fr_project_id", None), \
+            "EN and FR must be cached as separate projects"
+        res_titles = " ".join(r["title"] for r in d["resources"])
+        assert "YouTube tutorials" in res_titles
+        assert "Instructables projects" in res_titles
+
+    def test_french_cache_hit_increments_count(self, client):
+        # First fetch (may already be cached from above)
+        r1 = client.post(f"{BASE_URL}/api/projects/search",
+                         json={"query": self.QUERY, "lang": "fr"}, timeout=60)
+        assert r1.status_code == 200
+        d1 = r1.json()
+        c1 = d1["search_count"]
+        r2 = client.post(f"{BASE_URL}/api/projects/search",
+                         json={"query": self.QUERY, "lang": "fr"}, timeout=60)
+        assert r2.status_code == 200
+        d2 = r2.json()
+        assert d1["id"] == d2["id"]
+        assert d2["search_count"] == c1 + 1, f"search_count should increment: {c1} -> {d2['search_count']}"
+
+    def test_both_projects_retrievable(self, client):
+        fr_id = getattr(pytest, "fr_project_id", None)
+        en_id = getattr(pytest, "en_project_id", None)
+        if fr_id:
+            r = client.get(f"{BASE_URL}/api/projects/{fr_id}")
+            assert r.status_code == 200
+        if en_id:
+            r = client.get(f"{BASE_URL}/api/projects/{en_id}")
+            assert r.status_code == 200
+
+
 # ---------------- Pexels images & gating (new feature) ----------------
 class TestPexelsImages:
     NEW_QUERY = "build a small wooden stool"

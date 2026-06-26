@@ -1,22 +1,17 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Hammer, Wrench, Cog, Settings } from "lucide-react";
-
-const MESSAGES = [
-  "Scanning the maker web...",
-  "Aggregating tutorials & videos...",
-  "Sorting tools & materials...",
-  "Hammering out the steps...",
-  "Forging your blueprint...",
-];
+import { useLang } from "@/context/LanguageContext";
 
 export default function ForgingLoader({ query }) {
+  const { t } = useLang();
+  const messages = t("loaderMsgs");
   const [msgIndex, setMsgIndex] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setMsgIndex((i) => (i + 1) % MESSAGES.length), 1400);
+    const id = setInterval(() => setMsgIndex((i) => (i + 1) % messages.length), 1400);
     return () => clearInterval(id);
-  }, []);
+  }, [messages.length]);
 
   return (
     <motion.div
@@ -75,7 +70,7 @@ export default function ForgingLoader({ query }) {
         </motion.div>
 
         <h2 className="font-display text-4xl sm:text-5xl tracking-tight text-white uppercase mb-3">
-          Forging Guide
+          {t("forgingGuide")}
         </h2>
         {query && (
           <p className="font-mono2 text-orange-500 text-sm uppercase tracking-wider mb-4 max-w-md truncate">
@@ -89,7 +84,7 @@ export default function ForgingLoader({ query }) {
           className="font-mono2 text-zinc-400 text-sm h-5"
           data-testid="forging-status"
         >
-          {MESSAGES[msgIndex]}
+          {messages[msgIndex]}
         </motion.p>
 
         {/* Progress shimmer bar */}
