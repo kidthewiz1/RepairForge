@@ -85,6 +85,8 @@ export const translations = {
       "Filtering out the guy who says 'just buy a new one'...",
     ],
     loaderNote: "⚠️ This takes 30–60 seconds — our AI is genuinely reading the entire internet for you. Please don't refresh. It can sense your impatience.",
+    toastRefused: "🚫 This request was blocked. RepairForge only helps with legal, constructive projects.",
+    disclaimer: "RepairForge.ca and its creators assume no liability for the outcome of any project, modification, or repair undertaken based on the guides provided. Always prioritize safety, consult a licensed professional when in doubt, and comply with all applicable local laws and regulations. Use at your own risk.",
     // Toasts
     toastSaved: "Saved to favorites",
     toastUnsaved: "Removed from favorites",
@@ -187,6 +189,8 @@ export const translations = {
       "Vérification que le guide ne se termine pas par 'bonne chance'...",
     ],
     loaderNote: "⚠️ Comptez 30 à 60 secondes — notre IA lit vraiment tout l'internet pour vous. Ne rafraîchissez pas la page. Elle sent votre impatience.",
+    toastRefused: "🚫 Demande bloquée. RepairForge n'aide qu'avec des projets légaux et constructifs.",
+    disclaimer: "RepairForge.ca et ses concepteurs déclinent toute responsabilité quant aux résultats de tout projet, modification ou réparation effectués sur la base des guides fournis. Priorisez toujours la sécurité, consultez un professionnel agréé en cas de doute, et respectez toutes les lois et réglementations locales applicables. Utilisation à vos propres risques.",
     // Toasts
     toastSaved: "Ajouté aux favoris",
     toastUnsaved: "Retiré des favoris",

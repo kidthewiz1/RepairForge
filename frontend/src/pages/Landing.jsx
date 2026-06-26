@@ -32,7 +32,8 @@ export default function Landing() {
       const res = await api.post("/projects/search", { query: term, lang });
       navigate(`/project/${res.data.id}`);
     } catch (e) {
-      toast.error(t("toastForgeError"));
+      const detail = e?.response?.data?.detail;
+      toast.error(detail === "REFUSED" ? t("toastRefused") : t("toastForgeError"));
       setLoading(false);
     }
   };
@@ -132,7 +133,10 @@ export default function Landing() {
       )}
 
       <footer className="border-t-2 border-zinc-800 py-8 text-center">
-        <p className="font-mono2 text-xs text-zinc-600 uppercase tracking-widest">{t("footer")}</p>
+        <p className="font-mono2 text-xs text-zinc-600 uppercase tracking-widest mb-4">{t("footer")}</p>
+        <p className="font-mono2 text-xs text-zinc-700 max-w-2xl mx-auto px-4 leading-relaxed">
+          {t("disclaimer")}
+        </p>
       </footer>
     </div>
   );

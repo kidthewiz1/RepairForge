@@ -255,8 +255,30 @@ async def logout(request: Request, response: Response):
 
 
 # ---------------- DIY generation ----------------
+BLOCKED_KEYWORDS = [
+    # Weapons & explosives
+    "bomb", "explosive", "grenade", "pipe bomb", "molotov", "gunpowder", "gun powder",
+    "improvised weapon", "improvised explosive", "ied", "landmine", "detonator",
+    "silencer", "suppresseur", "modify firearm", "convert pistol", "automatic weapon",
+    # Drug manufacturing
+    "methamphetamine", "crystal meth", "cook meth", "synthesize cocaine", "manufacture heroin",
+    "fentanyl synthesis", "drug lab", "laboratoire drogue",
+    # Poisons & chemical weapons
+    "nerve agent", "sarin", "ricin", "cyanide gas", "poison gas", "weaponize",
+    # Self-harm
+    "suicide", "self-harm", "self harm", "kill myself", "end my life",
+]
+
+def is_dangerous_query(query: str) -> bool:
+    q = query.lower()
+    return any(kw in q for kw in BLOCKED_KEYWORDS)
+
+
 GUIDE_SYSTEM = """You are an expert DIY master who aggregates the best knowledge from across the web (instructables, youtube tutorials, manufacturer guides, maker blogs) into one definitive project guide.
 Given a project request, produce a complete, practical, step-by-step build guide.
+
+SAFETY POLICY (HIGHEST PRIORITY): If the request involves weapons, explosives, illegal drug manufacturing, poison synthesis, or anything designed to harm humans or animals, respond with exactly the word REFUSED and nothing else.
+
 Return ONLY valid minified JSON (no markdown, no code fences) with EXACTLY this schema:
 {
  "title": "string - concise project title",
@@ -299,7 +321,9 @@ async def generate_guide(query: str, lang: str = "en") -> dict:
         system=system,
         messages=[{"role": "user", "content": f"Create a complete DIY guide for: {query}"}],
     )
-    resp = message.content[0].text
+    resp = message.content[0].text.strip()
+    if resp.upper().startswith("REFUSED"):
+        raise ValueError("REFUSED")
     data = extract_json(resp)
     return data
 
@@ -360,6 +384,8 @@ async def search_project(req: SearchRequest):
     query = req.query.strip()
     if not query:
         raise HTTPException(status_code=400, detail="Query required")
+    if is_dangerous_query(query):
+        raise HTTPException(status_code=400, detail="REFUSED")
     lang = "fr" if req.lang == "fr" else "en"
 
     cached = await db.projects.find_one({"query_lower": query.lower(), "lang": lang}, {"_id": 0})
@@ -370,6 +396,10 @@ async def search_project(req: SearchRequest):
 
     try:
         data = await generate_guide(query, lang)
+    except ValueError as e:
+        if "REFUSED" in str(e):
+            raise HTTPException(status_code=400, detail="REFUSED")
+        raise HTTPException(status_code=502, detail="Could not generate guide. Try again.")
     except Exception as e:
         logger.error(f"LLM generation failed: {e}")
         raise HTTPException(status_code=502, detail="Could not generate guide. Try again.")
