@@ -29,6 +29,13 @@
 - NOT YET VERIFIED: AI search end-to-end (Universal Key had $0 balance at build time).
 
 ## Backlog
-- P0: Verify AI search once Universal Key has balance; run full testing agent
-- P1: Streaming generation UX, project search-history page, share guide link
-- P2: PDF export of guide, print shopping list, comments/ratings, image per project
+- P1: True recurring Stripe subscription (current Pro is a one-time $9 unlock granting is_pro; recurring needs a Stripe Price ID set in Dashboard)
+- P1: Streaming generation UX, search-history page, share guide link, Pro badge in navbar
+- P2: comments/ratings, generated image per project, suppress initial 401 console noise
+
+## Monetization (added 2026-06-26)
+- Free preview: title, summary, difficulty/time/cost, FIRST step only; tools & materials shopping list always free with one-click Print/Save-PDF (browser print).
+- Paid unlock (full steps + pro tips + safety + web resources): Stripe Checkout.
+  - $2.99 one-time per-guide unlock (db.unlocks)
+  - $9 Pro (sets users.is_pro=true; one-time charge in test mode — recurring not yet wired)
+- Server-side fixed pricing (PACKAGES), payment_transactions collection, idempotent grant_access via processed flag, webhook + polling status. Verified by testing agent.
