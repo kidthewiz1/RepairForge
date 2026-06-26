@@ -4,6 +4,7 @@ import { Search, ArrowRight, Wrench, Zap, BookOpen, Bookmark } from "lucide-reac
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import ProjectCard from "@/components/ProjectCard";
+import ForgingLoader from "@/components/ForgingLoader";
 import { api } from "@/lib/api";
 
 const SUGGESTIONS = [
@@ -20,6 +21,7 @@ const HERO_IMG = "https://images.unsplash.com/photo-1614585849038-272ee92d30fa";
 export default function Landing() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgingTerm, setForgingTerm] = useState("");
   const [trending, setTrending] = useState([]);
   const navigate = useNavigate();
 
@@ -30,19 +32,20 @@ export default function Landing() {
   const runSearch = async (q) => {
     const term = (q ?? query).trim();
     if (!term) return;
+    setForgingTerm(term);
     setLoading(true);
     try {
       const res = await api.post("/projects/search", { query: term });
       navigate(`/project/${res.data.id}`);
     } catch (e) {
       toast.error("Could not forge that guide. Try rephrasing.");
-    } finally {
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-black">
+      {loading && <ForgingLoader query={forgingTerm} />}
       <Navbar />
 
       {/* Hero */}
