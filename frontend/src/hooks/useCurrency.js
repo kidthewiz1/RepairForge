@@ -34,5 +34,15 @@ export function useCurrency() {
       maximumFractionDigits: currency === "JPY" || currency === "KRW" ? 0 : 2,
     }).format(usdAmount * rate);
 
-  return { format, currency };
+  // Parses a cost string like "40-80", "$40 - $80", "40€ - 90€" and reformats in local currency.
+  const formatCostRange = (costStr) => {
+    if (!costStr) return costStr;
+    const nums = [...String(costStr).matchAll(/\d+(?:[.,]\d+)?/g)]
+      .map((m) => parseFloat(m[0].replace(",", "")));
+    if (nums.length === 0) return costStr;
+    if (nums.length === 1) return format(nums[0]);
+    return `${format(nums[0])} – ${format(nums[1])}`;
+  };
+
+  return { format, formatCostRange, currency };
 }

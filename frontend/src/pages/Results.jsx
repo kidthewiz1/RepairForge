@@ -23,7 +23,7 @@ export default function Results() {
   const [searchParams] = useSearchParams();
   const { user, login, checkAuth } = useAuth();
   const { t } = useLang();
-  const { format: formatPrice } = useCurrency();
+  const { format: formatPrice, formatCostRange } = useCurrency();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [favorited, setFavorited] = useState(false);
@@ -167,7 +167,7 @@ export default function Results() {
               <div className="flex flex-wrap gap-6 mt-6 font-mono2 text-sm">
                 <span className="flex items-center gap-2 text-zinc-300"><Gauge className="w-4 h-4 text-orange-500" /> {project.difficulty}</span>
                 <span className="flex items-center gap-2 text-zinc-300"><Clock className="w-4 h-4 text-orange-500" /> {project.estimated_time}</span>
-                <span className="flex items-center gap-2 text-zinc-300"><DollarSign className="w-4 h-4 text-orange-500" /> {project.estimated_cost}</span>
+                <span className="flex items-center gap-2 text-zinc-300"><DollarSign className="w-4 h-4 text-orange-500" /> {formatCostRange(project.estimated_cost)}</span>
               </div>
             </div>
             <div className="flex flex-col gap-3 lg:w-56">

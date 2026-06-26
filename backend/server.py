@@ -285,7 +285,7 @@ Return ONLY valid minified JSON (no markdown, no code fences) with EXACTLY this 
  "summary": "string - 2 sentence overview",
  "difficulty": "Beginner|Intermediate|Advanced",
  "estimated_time": "string e.g. '3-4 hours'",
- "estimated_cost": "string e.g. '$40 - $80'",
+ "estimated_cost": "numeric USD range, digits only, no currency symbols, e.g. '40-80'",
  "category": "string e.g. Woodworking, Electronics, Home Repair, Crafts, Automotive, Gardening",
  "tools": ["list of required tools"],
  "materials": [{"name":"string","quantity":"string"}],
