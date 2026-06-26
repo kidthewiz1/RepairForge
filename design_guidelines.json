@@ -1,0 +1,98 @@
+{
+  "project_name": "DIY Project Aggregator",
+  "theme": "dark",
+  "archetype": "Archetype 4 (Swiss & High-Contrast) - Brutalist Industrial Variant",
+  "design_philosophy": "Raw, anti-corporate, highly functional mechanical aesthetic. Mimics physical workshop environments and industrial control panels. Zero soft edges. High contrast. Exposed structural grids.",
+  "typography": {
+    "primary_heading_font": "Bebas Neue",
+    "secondary_body_font": "Space Mono",
+    "import_url": "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap",
+    "hierarchy": {
+      "h1": "text-5xl sm:text-6xl+ font-normal font-['Bebas_Neue'] uppercase tracking-tight text-white",
+      "h2": "text-3xl sm:text-4xl font-normal font-['Bebas_Neue'] uppercase tracking-tight text-orange-500",
+      "h3": "text-xl sm:text-2xl font-bold font-['Space_Mono'] uppercase text-white",
+      "body": "text-base font-normal font-['Space_Mono'] leading-relaxed text-zinc-300",
+      "small_label": "text-xs font-bold font-['Space_Mono'] uppercase tracking-[0.2em] text-zinc-400"
+    }
+  },
+  "colors": {
+    "background": {
+      "base": "#000000",
+      "surface": "#09090b",
+      "panel": "#18181b"
+    },
+    "text": {
+      "primary": "#ffffff",
+      "secondary": "#a1a1aa",
+      "inverse": "#000000"
+    },
+    "brand_accents": {
+      "primary": "#ea580c", 
+      "primary_hover": "#f97316",
+      "warning": "#eab308",
+      "success": "#22c55e",
+      "danger": "#ef4444",
+      "border_default": "#3f3f46",
+      "border_focus": "#ea580c"
+    }
+  },
+  "spacing_and_layout": {
+    "global_spacing": "Generous spacing within components, tight gaps between structural panels.",
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grid_strategy": "Control Room Grid (Dashboard style). Use tight gaps (gap-4 or gap-0 with borders) and exposed layout lines. `border-collapse` aesthetics. Grid items should stretch to fill heights. Use `p-6` or `p-8` inside bordered containers.",
+    "hero_overlay": "bg-black/60 (Never darker, allow mechanical textures to show through)."
+  },
+  "components": {
+    "general_rules": "No border radius (`rounded-none`). Hard offset shadows instead of soft blurs. Abrupt interaction states (no ease-in-out transitions).",
+    "buttons": {
+      "primary": "rounded-none border-2 border-orange-600 bg-orange-600 text-black font-bold font-['Space_Mono'] uppercase px-6 py-3 shadow-[4px_4px_0_#ffffff] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-black",
+      "secondary": "rounded-none border-2 border-zinc-600 bg-transparent text-white font-bold font-['Space_Mono'] uppercase px-6 py-3 shadow-[4px_4px_0_#ea580c] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-none focus:outline-none focus:ring-2 focus:ring-orange-500"
+    },
+    "cards": {
+      "style": "rounded-none border-2 border-zinc-800 bg-zinc-950 p-6 shadow-[6px_6px_0_#ea580c] hover:border-orange-600 transition-none relative"
+    },
+    "inputs": {
+      "style": "rounded-none border-2 border-zinc-700 bg-zinc-900 text-white font-['Space_Mono'] p-3 focus:border-orange-500 focus:ring-0 focus:shadow-[4px_4px_0_#ea580c] outline-none transition-none"
+    },
+    "badges_labels": {
+      "style": "rounded-none bg-orange-600/20 border border-orange-600 text-orange-500 font-['Space_Mono'] text-xs font-bold uppercase px-2 py-1"
+    },
+    "shadcn_overrides": "Override all Shadcn UI components to have `rounded-none`. Strip `transition-all` and replace with `transition-none` for brutalist physical feel. Override soft shadows."
+  },
+  "motion_and_interactions": {
+    "hover_states": "Abrupt color inversion or shadow snapping. Mimic physical hardware buttons being pressed.",
+    "focus_states": "Harsh, visible dotted lines or thick neon solid outlines. Essential for accessibility in brutalist design.",
+    "page_transitions": "Instant cut or stark wipe, avoiding smooth fades."
+  },
+  "icons_and_assets": {
+    "library": "lucide-react",
+    "style": "Use technical, geometric icons. Stroke width 2px. No rounded caps if avoidable.",
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1614585849038-272ee92d30fa",
+        "category": "hero_background",
+        "description": "Dark workshop tools background, high contrast, perfect for the main landing hero section. Apply a black/60 overlay."
+      },
+      {
+        "url": "https://images.pexels.com/photos/11613795/pexels-photo-11613795.jpeg",
+        "category": "project_thumbnail",
+        "description": "Woodworking tools and lumber for a sample DIY project card (e.g., 'Build a Workbench')."
+      },
+      {
+        "url": "https://images.pexels.com/photos/4116221/pexels-photo-4116221.jpeg",
+        "category": "project_thumbnail",
+        "description": "Mechanic repairing a car engine for a sample DIY project card (e.g., 'Engine Repair Basics')."
+      }
+    ]
+  },
+  "testing": {
+    "data_attributes": "All interactive elements (buttons, project cards, search input, save toggles, login buttons) MUST include `data-testid` attributes (kebab-case, role-based)."
+  },
+  "key_features_implementation": {
+    "search_bar": "Command-line style input. Oversized, full width on desktop, prominent in the header.",
+    "project_feed": "Bento grid with masonry or strict row-based control room alignment. Cards must have brutalist borders.",
+    "project_detail": "Schematic layout. Steps listed in monospace numerals (01, 02, 03). Tools & Materials in a hard-lined HTML table or grid.",
+    "save_favorites": "Toggle button that physically visually depresses (shadow disappears, translates down/right).",
+    "google_login": "Brutalist Google Auth button. No pill shapes. Strict rectangle."
+  }
+}
