@@ -13,10 +13,9 @@ from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 import httpx
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
-from emergentintegrations.payments.stripe.checkout import (
-    StripeCheckout, CheckoutSessionRequest,
-)
+import asyncio
+import anthropic
+import stripe
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,6 +26,7 @@ db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
 STRIPE_API_KEY = os.environ['STRIPE_API_KEY']
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 PEXELS_API_KEY = os.environ['PEXELS_API_KEY']
 EMERGENT_AUTH_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
@@ -292,13 +292,14 @@ async def generate_guide(query: str, lang: str = "en") -> dict:
     system = GUIDE_SYSTEM
     if lang == "fr":
         system += "\n\nIMPORTANT: Write ALL text fields (title, summary, step titles/details/tips, materials names, safety_tips, resource titles) in FRENCH. EXCEPTION: keep each step's 'image_keyword' in ENGLISH (concrete nouns) for stock-photo search accuracy."
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"diy_{uuid.uuid4().hex[:8]}",
-        system_message=system,
-    ).with_model("anthropic", "claude-sonnet-4-6")
-    msg = UserMessage(text=f"Create a complete DIY guide for: {query}")
-    resp = await chat.send_message(msg)
+    client = anthropic.AsyncAnthropic(api_key=EMERGENT_LLM_KEY)
+    message = await client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=8096,
+        system=system,
+        messages=[{"role": "user", "content": f"Create a complete DIY guide for: {query}"}],
+    )
+    resp = message.content[0].text
     data = extract_json(resp)
     return data
 
@@ -533,10 +534,6 @@ async def create_checkout(body: CheckoutRequest, request: Request, user: User = 
         raise HTTPException(status_code=400, detail="project_id required for guide unlock")
 
     amount = float(PACKAGES[body.package_id]["amount"])
-    host_url = str(request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-
     origin = body.origin_url.rstrip("/")
     rp = body.return_path if body.return_path.startswith("/") else "/" + body.return_path
     success_url = f"{origin}{rp}?session_id={{CHECKOUT_SESSION_ID}}"
@@ -546,14 +543,26 @@ async def create_checkout(body: CheckoutRequest, request: Request, user: User = 
         "package_id": body.package_id,
         "project_id": body.project_id or "",
     }
-    req = CheckoutSessionRequest(
-        amount=amount, currency="usd",
-        success_url=success_url, cancel_url=cancel_url, metadata=metadata,
+    stripe.api_key = STRIPE_API_KEY
+    session = await asyncio.to_thread(
+        stripe.checkout.Session.create,
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {"name": PACKAGES[body.package_id]["label"]},
+                "unit_amount": int(amount * 100),
+            },
+            "quantity": 1,
+        }],
+        mode="payment",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=metadata,
     )
-    session = await stripe_checkout.create_checkout_session(req)
 
     await db.payment_transactions.insert_one({
-        "session_id": session.session_id,
+        "session_id": session.id,
         "user_id": user.user_id,
         "email": user.email,
         "package_id": body.package_id,
@@ -565,7 +574,7 @@ async def create_checkout(body: CheckoutRequest, request: Request, user: User = 
         "processed": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
-    return {"url": session.url, "session_id": session.session_id}
+    return {"url": session.url, "session_id": session.id}
 
 
 @api_router.get("/payments/checkout/status/{session_id}")
@@ -574,21 +583,20 @@ async def checkout_status(session_id: str, request: Request):
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    host_url = str(request.base_url)
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{host_url}api/webhook/stripe")
-    status = await stripe_checkout.get_checkout_status(session_id)
+    stripe.api_key = STRIPE_API_KEY
+    session = await asyncio.to_thread(stripe.checkout.Session.retrieve, session_id)
 
     await db.payment_transactions.update_one(
         {"session_id": session_id},
-        {"$set": {"payment_status": status.payment_status, "status": status.status}},
+        {"$set": {"payment_status": session.payment_status, "status": session.status}},
     )
-    if status.payment_status == "paid" and not txn.get("processed"):
+    if session.payment_status == "paid" and not txn.get("processed"):
         await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"processed": True}})
         await grant_access(txn)
 
     return {
-        "payment_status": status.payment_status,
-        "status": status.status,
+        "payment_status": session.payment_status,
+        "status": session.status,
         "package_id": txn["package_id"],
     }
 
@@ -597,22 +605,27 @@ async def checkout_status(session_id: str, request: Request):
 async def stripe_webhook(request: Request):
     body = await request.body()
     sig = request.headers.get("Stripe-Signature")
-    host_url = str(request.base_url)
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{host_url}api/webhook/stripe")
+    stripe.api_key = STRIPE_API_KEY
     try:
-        resp = await stripe_checkout.handle_webhook(body, sig)
+        event = await asyncio.to_thread(
+            stripe.Webhook.construct_event, body, sig, STRIPE_WEBHOOK_SECRET
+        )
     except Exception as e:
         logger.error(f"Stripe webhook error: {e}")
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
-    if resp.payment_status == "paid":
-        txn = await db.payment_transactions.find_one({"session_id": resp.session_id})
-        if txn and not txn.get("processed"):
-            await db.payment_transactions.update_one(
-                {"session_id": resp.session_id},
-                {"$set": {"processed": True, "payment_status": resp.payment_status}},
-            )
-            await grant_access(txn)
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        session_id = session["id"]
+        payment_status = session.get("payment_status")
+        if payment_status == "paid":
+            txn = await db.payment_transactions.find_one({"session_id": session_id})
+            if txn and not txn.get("processed"):
+                await db.payment_transactions.update_one(
+                    {"session_id": session_id},
+                    {"$set": {"processed": True, "payment_status": payment_status}},
+                )
+                await grant_access(txn)
     return {"ok": True}
 
 
@@ -623,10 +636,15 @@ async def root():
 
 app.include_router(api_router)
 
+_cors_origins_raw = os.environ.get('CORS_ORIGINS', '')
+_cors_origins = [o.strip() for o in _cors_origins_raw.split(',') if o.strip()]
+if not _cors_origins:
+    raise RuntimeError("CORS_ORIGINS environment variable must be set (comma-separated list of allowed origins). Do not use '*' with allow_credentials=True.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
