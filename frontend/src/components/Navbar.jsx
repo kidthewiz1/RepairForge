@@ -4,9 +4,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
 
 export default function Navbar() {
-  const { user, login, logout } = useAuth();
+  const { user, login, demoLogin, logout } = useAuth();
   const { lang, setLang, t } = useLang();
   const navigate = useNavigate();
+
+  const handleDemo = async () => {
+    try { await demoLogin(); navigate("/dashboard"); } catch {}
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-black border-b-2 border-zinc-800">
@@ -54,9 +58,14 @@ export default function Navbar() {
               </div>
             </>
           ) : (
-            <button onClick={login} className="btn-brutal px-5 py-2 text-xs" data-testid="login-btn">
-              {t("signIn")}
-            </button>
+            <>
+              <button onClick={handleDemo} className="hidden sm:inline-block border-2 border-zinc-700 text-white font-mono2 text-xs font-bold uppercase px-4 py-2 hover:border-orange-500 transition-none" data-testid="demo-login-btn">
+                {t("demoPro")}
+              </button>
+              <button onClick={login} className="btn-brutal px-5 py-2 text-xs" data-testid="login-btn">
+                {t("signIn")}
+              </button>
+            </>
           )}
         </nav>
       </div>

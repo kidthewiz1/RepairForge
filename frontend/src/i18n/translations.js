@@ -2,6 +2,7 @@ export const translations = {
   en: {
     // Navbar
     signIn: "Sign In",
+    demoPro: "Demo (Pro)",
     workshop: "Workshop",
     logout: "Logout",
     // Landing
@@ -95,6 +96,7 @@ export const translations = {
   fr: {
     // Navbar
     signIn: "Connexion",
+    demoPro: "Démo (Pro)",
     workshop: "Atelier",
     logout: "Déconnexion",
     // Landing

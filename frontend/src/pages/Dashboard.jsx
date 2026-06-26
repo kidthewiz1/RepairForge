@@ -9,9 +9,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
 
 export default function Dashboard() {
-  const { user, loading, login } = useAuth();
+  const { user, loading, login, demoLogin } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
+
+  const handleDemo = async () => {
+    try { await demoLogin(); load(); } catch {}
+  };
   const [tab, setTab] = useState("favorites");
   const [favorites, setFavorites] = useState([]);
   const [collections, setCollections] = useState([]);
@@ -38,6 +42,7 @@ export default function Dashboard() {
           <h1 className="font-display text-5xl text-white uppercase mb-4">{t("yourWorkshop")}</h1>
           <p className="font-mono2 text-zinc-400 mb-8">{t("dashboardPrompt")}</p>
           <button onClick={login} className="btn-brutal px-8 py-3" data-testid="dashboard-login-btn">{t("signInWithGoogle")}</button>
+          <button onClick={handleDemo} className="block mx-auto mt-4 border-2 border-zinc-700 text-white font-mono2 text-xs font-bold uppercase px-6 py-3 hover:border-orange-500 transition-none" data-testid="dashboard-demo-btn">{t("demoPro")}</button>
         </div>
       </div>
     );

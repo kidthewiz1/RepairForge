@@ -36,6 +36,12 @@ export const AuthProvider = ({ children }) => {
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
+  const demoLogin = async () => {
+    const res = await api.post("/auth/demo-login");
+    setUser(res.data);
+    return res.data;
+  };
+
   const logout = async () => {
     try {
       await api.post("/auth/logout");
@@ -45,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, demoLogin, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

@@ -202,6 +202,40 @@ async def process_session(request: Request, response: Response):
     return {"user_id": user_id, "email": data["email"], "name": data["name"], "picture": data.get("picture", "")}
 
 
+@api_router.post("/auth/demo-login")
+async def demo_login(response: Response):
+    """Test-only: log in as a Pro demo account that unlocks all guides (bypasses Google)."""
+    email = "demo-pro@repairforge.ca"
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    if existing:
+        user_id = existing["user_id"]
+        await db.users.update_one({"user_id": user_id}, {"$set": {"is_pro": True}})
+    else:
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        await db.users.insert_one({
+            "user_id": user_id,
+            "email": email,
+            "name": "Demo Pro",
+            "picture": "",
+            "is_pro": True,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    session_token = f"demo_{uuid.uuid4().hex}"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    response.set_cookie(
+        key="session_token", value=session_token, httponly=True,
+        secure=True, samesite="none", path="/", max_age=7 * 24 * 60 * 60,
+    )
+    return {"user_id": user_id, "email": email, "name": "Demo Pro", "picture": "", "is_pro": True}
+
+
 @api_router.get("/auth/me", response_model=User)
 async def auth_me(user: User = Depends(require_user)):
     return user
