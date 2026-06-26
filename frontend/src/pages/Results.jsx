@@ -216,7 +216,7 @@ export default function Results() {
                       {s.tip && <p className="font-mono2 text-xs text-orange-400 mt-3 border-l-2 border-orange-600 pl-3">PRO TIP: {s.tip}</p>}
                     </div>
                   </div>
-                  {!project.locked && (s.image_url || true) && (
+                  {!project.locked && (
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
                       {s.image_url && (
                         <div className="sm:col-span-2 border-2 border-zinc-800 overflow-hidden">
@@ -291,7 +291,10 @@ export default function Results() {
               <h3 className="flex items-center gap-2 font-mono2 font-bold uppercase text-white mb-4"><Package className="w-5 h-5 text-orange-500" /> Materials</h3>
               <ul className="space-y-2">
                 {project.materials?.map((m, i) => (
-                  <li key={i} className="font-mono2 text-sm text-zinc-300 flex justify-between gap-2 border-b border-zinc-800 pb-2"><span>{m.name}</span><span className="text-orange-400 whitespace-nowrap">{m.quantity}</span></li>
+                  <li key={i} className="font-mono2 text-sm text-zinc-300 border-b border-zinc-800 pb-2">
+                    <span className="block break-words">{m.name}</span>
+                    {m.quantity && <span className="block text-orange-400 text-xs mt-0.5">{m.quantity}</span>}
+                  </li>
                 ))}
               </ul>
               <button onClick={() => window.print()} className="btn-brutal w-full mt-4 px-3 py-2 text-xs flex items-center justify-center gap-2" data-testid="print-list-btn">

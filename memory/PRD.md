@@ -28,6 +28,11 @@
 - VERIFIED via curl: auth/me, favorites, collections, trending. Frontend renders.
 - NOT YET VERIFIED: AI search end-to-end (Universal Key had $0 balance at build time).
 
+## Step Media (added 2026-06-26)
+- Each guide step gets a real Pexels stock photo (server-side `fetch_pexels`, cached in db.photo_cache + on the project) + a "Watch on YouTube" button (targeted search, no key).
+- Media shown ONLY in unlocked/paid section; free preview step strips image_url. PEXELS_API_KEY in .env.
+- Verified by testing agent (23/23 backend, browser pro vs free gating). Fixed Materials overflow + dead conditional.
+
 ## Backlog
 - P1: True recurring Stripe subscription (current Pro is a one-time $9 unlock granting is_pro; recurring needs a Stripe Price ID set in Dashboard)
 - P1: Streaming generation UX, search-history page, share guide link, Pro badge in navbar
