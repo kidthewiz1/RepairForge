@@ -14,6 +14,9 @@ from datetime import datetime, timezone, timedelta
 import httpx
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from emergentintegrations.payments.stripe.checkout import (
+    StripeCheckout, CheckoutSessionRequest,
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -23,7 +26,14 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
+STRIPE_API_KEY = os.environ['STRIPE_API_KEY']
 EMERGENT_AUTH_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+
+# Server-side fixed pricing (never trust frontend amounts)
+PACKAGES = {
+    "pro": {"amount": 9.00, "label": "Pro Monthly"},
+    "guide": {"amount": 2.99, "label": "Guide Unlock"},
+}
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -78,6 +88,14 @@ class User(BaseModel):
     email: str
     name: str
     picture: str = ""
+    is_pro: bool = False
+
+
+class CheckoutRequest(BaseModel):
+    package_id: str
+    origin_url: str
+    return_path: str = "/"
+    project_id: Optional[str] = None
 
 
 class CollectionCreate(BaseModel):
@@ -109,7 +127,22 @@ async def get_current_user(request: Request) -> Optional[User]:
     user_doc = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
     if not user_doc:
         return None
-    return User(**{k: user_doc.get(k, "") for k in ["user_id", "email", "name", "picture"]})
+    return User(
+        user_id=user_doc["user_id"],
+        email=user_doc.get("email", ""),
+        name=user_doc.get("name", ""),
+        picture=user_doc.get("picture", ""),
+        is_pro=bool(user_doc.get("is_pro", False)),
+    )
+
+
+async def user_has_access(user: Optional[User], project_id: str) -> bool:
+    if not user:
+        return False
+    if user.is_pro:
+        return True
+    unlock = await db.unlocks.find_one({"user_id": user.user_id, "project_id": project_id})
+    return bool(unlock)
 
 
 async def require_user(request: Request) -> User:
@@ -292,13 +325,31 @@ async def trending():
     return [Project(**d) for d in docs]
 
 
-@api_router.get("/projects/{project_id}", response_model=Project)
-async def get_project(project_id: str):
+@api_router.get("/projects/{project_id}")
+async def get_project(project_id: str, request: Request):
     doc = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Not found")
     doc.pop("query_lower", None)
-    return Project(**doc)
+    project = Project(**doc)
+    user = await get_current_user(request)
+    has_access = await user_has_access(user, project_id)
+
+    data = project.model_dump()
+    data["created_at"] = data["created_at"].isoformat()
+    data["total_steps"] = len(project.steps)
+    data["has_access"] = has_access
+    data["is_pro"] = bool(user and user.is_pro)
+    data["locked"] = not has_access
+    if not has_access:
+        # Free preview: title, summary, first step + tools & materials (for free shopping list)
+        first = data["steps"][:1]
+        for s in first:
+            s["tip"] = ""
+        data["steps"] = first
+        data["safety_tips"] = []
+        data["resources"] = []
+    return data
 
 
 # ---------------- Favorites ----------------
@@ -376,6 +427,117 @@ async def add_to_collection(collection_id: str, project_id: str, user: User = De
 @api_router.delete("/collections/{collection_id}")
 async def delete_collection(collection_id: str, user: User = Depends(require_user)):
     await db.collections.delete_one({"id": collection_id, "user_id": user.user_id})
+    return {"ok": True}
+
+
+# ---------------- Payments (Stripe) ----------------
+async def grant_access(txn: dict):
+    if txn["package_id"] == "pro":
+        await db.users.update_one({"user_id": txn["user_id"]}, {"$set": {"is_pro": True}})
+    elif txn["package_id"] == "guide" and txn.get("project_id"):
+        await db.unlocks.update_one(
+            {"user_id": txn["user_id"], "project_id": txn["project_id"]},
+            {"$setOnInsert": {
+                "user_id": txn["user_id"], "project_id": txn["project_id"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+
+
+@api_router.get("/payments/packages")
+async def get_packages():
+    return PACKAGES
+
+
+@api_router.post("/payments/checkout/session")
+async def create_checkout(body: CheckoutRequest, request: Request, user: User = Depends(require_user)):
+    if body.package_id not in PACKAGES:
+        raise HTTPException(status_code=400, detail="Invalid package")
+    if body.package_id == "guide" and not body.project_id:
+        raise HTTPException(status_code=400, detail="project_id required for guide unlock")
+
+    amount = float(PACKAGES[body.package_id]["amount"])
+    host_url = str(request.base_url)
+    webhook_url = f"{host_url}api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+
+    origin = body.origin_url.rstrip("/")
+    rp = body.return_path if body.return_path.startswith("/") else "/" + body.return_path
+    success_url = f"{origin}{rp}?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}{rp}"
+    metadata = {
+        "user_id": user.user_id,
+        "package_id": body.package_id,
+        "project_id": body.project_id or "",
+    }
+    req = CheckoutSessionRequest(
+        amount=amount, currency="usd",
+        success_url=success_url, cancel_url=cancel_url, metadata=metadata,
+    )
+    session = await stripe_checkout.create_checkout_session(req)
+
+    await db.payment_transactions.insert_one({
+        "session_id": session.session_id,
+        "user_id": user.user_id,
+        "email": user.email,
+        "package_id": body.package_id,
+        "project_id": body.project_id or "",
+        "amount": amount,
+        "currency": "usd",
+        "payment_status": "initiated",
+        "status": "initiated",
+        "processed": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"url": session.url, "session_id": session.session_id}
+
+
+@api_router.get("/payments/checkout/status/{session_id}")
+async def checkout_status(session_id: str, request: Request):
+    txn = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    if not txn:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    host_url = str(request.base_url)
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{host_url}api/webhook/stripe")
+    status = await stripe_checkout.get_checkout_status(session_id)
+
+    await db.payment_transactions.update_one(
+        {"session_id": session_id},
+        {"$set": {"payment_status": status.payment_status, "status": status.status}},
+    )
+    if status.payment_status == "paid" and not txn.get("processed"):
+        await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"processed": True}})
+        await grant_access(txn)
+
+    return {
+        "payment_status": status.payment_status,
+        "status": status.status,
+        "package_id": txn["package_id"],
+    }
+
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    body = await request.body()
+    sig = request.headers.get("Stripe-Signature")
+    host_url = str(request.base_url)
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{host_url}api/webhook/stripe")
+    try:
+        resp = await stripe_checkout.handle_webhook(body, sig)
+    except Exception as e:
+        logger.error(f"Stripe webhook error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid webhook")
+
+    if resp.payment_status == "paid":
+        txn = await db.payment_transactions.find_one({"session_id": resp.session_id})
+        if txn and not txn.get("processed"):
+            await db.payment_transactions.update_one(
+                {"session_id": resp.session_id},
+                {"$set": {"processed": True, "payment_status": resp.payment_status}},
+            )
+            await grant_access(txn)
     return {"ok": True}
 
 
